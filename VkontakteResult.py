@@ -24,7 +24,7 @@ class VkontakteResult:
 		if self.title[-1]==" ":
 			self.title=self.title[:-1]
 		self.title=self.remove_crap(self.title)
-		self.duration = int(entry['duration'])
+		self.duration = entry['duration']
 		self.artist = entry['artist']
 		self.url = entry['url'].replace("\\","")
 	
@@ -34,8 +34,9 @@ class VkontakteResult:
 		w=w.replace("*","'")
 		w=w.replace("`","'")
 		w=w.replace("  "," ")
+		w=w.replace("\n"," ")
 		f=w.find("(")
-		if f>1:
+		if f>4:
 			w=w[:f]
 		return w
 		
