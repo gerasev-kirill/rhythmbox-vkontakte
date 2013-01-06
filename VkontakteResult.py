@@ -28,6 +28,7 @@ class VkontakteResult:
 		self.artist = entry['artist']
 		self.url = entry['url'].replace("\\","")
 	
+
 	def remove_crap(self,w):
 		w=w.replace("`","'")
 		w=w.replace("' ","'")
@@ -38,6 +39,10 @@ class VkontakteResult:
 		f=w.find("(")
 		if f>4:
 			w=w[:f]
+		for exp in ["...","?","!",". "]:
+			i=w.find(exp)
+			if i>1:
+				w=w[:i+exp.__len__()]
 		return w
 		
 		

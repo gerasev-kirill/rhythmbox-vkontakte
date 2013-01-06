@@ -46,6 +46,7 @@ class VkontakteSource(rb.Source):
 		query_model = rhythmdb.QueryModel()
 		self.props.query_model = query_model
 		
+		self.entry_view.append_column(rb.ENTRY_VIEW_COL_TRACK_NUMBER, False)
 		self.entry_view.append_column(rb.ENTRY_VIEW_COL_TITLE, True)
 		self.entry_view.append_column(rb.ENTRY_VIEW_COL_ARTIST, False)
 		self.entry_view.append_column(rb.ENTRY_VIEW_COL_DURATION, False)
@@ -57,24 +58,47 @@ class VkontakteSource(rb.Source):
 		# Set up the search bar and button UI. This could probably be done in a better way.
 		search_entry = gtk.combo_box_entry_new_text()
 		self.search_button = gtk.Button(stock=gtk.STOCK_FIND)
-		self.pref_button=gtk.Button(stock=gtk.STOCK_PREFERENCES)
-		self.my_audio_button = gtk.Button("Show all my audio")
+		self.pref_button=gtk.Button()
 		image = gtk.Image()
-		image.set_from_stock(gtk.STOCK_CDROM,gtk.ICON_SIZE_BUTTON)
-		self.my_audio_button.set_image(image)		
+		image.set_from_stock(gtk.STOCK_PREFERENCES,gtk.ICON_SIZE_BUTTON)
+		self.pref_button.set_image(image)
+
+		self.my_audio_button = gtk.Button("Show all my audio")
+		image2 = gtk.Image()
+		image2.set_from_stock(gtk.STOCK_CDROM,gtk.ICON_SIZE_BUTTON)
+		self.my_audio_button.set_image(image2)		
+
+
+		#combo
+		list_store=gtk.ListStore(str)
+		self.positions=["By date",
+				"By duration",
+				"By popularity"]
+		for pos in self.positions:
+			list_store.append([pos])
+
+		self.combobox = gtk.ComboBox(list_store)
+		renderer_text = gtk.CellRendererText()
+		self.combobox.pack_start(renderer_text, True)
+		self.combobox.add_attribute(renderer_text, "text", 0)
+		self.combobox.set_active(2)
+
+
 
 		alignment = gtk.Alignment()
 		alignment.add(self.search_button)
-		alignment.add(self.my_audio_button)
-		alignment.add(self.pref_button)
+		alignment2 = gtk.Alignment()
+		alignment2.add(self.combobox)
 		hbox = gtk.HBox()
 		hbox.pack_start(search_entry)
+		hbox.pack_start(alignment2)
 		hbox.pack_start(alignment)
+
 		hbox.pack_start(self.my_audio_button, False)
 		hbox.pack_start(self.pref_button, False)
 		hbox.set_child_packing(search_entry, True, True, 0, gtk.PACK_START)
+		hbox.set_child_packing(alignment2, False,False,2, gtk.PACK_START)
 		hbox.set_child_packing(alignment, True, True, 2, gtk.PACK_START)
-		#hbox.set_child_packing(self.my_audio_button, True,True,1, gtk.PACK_START)
 		vbox = gtk.VBox()
 		vbox.pack_start(hbox)
 		vbox.set_child_packing(hbox, False, False, 2, gtk.PACK_START)
@@ -176,7 +200,7 @@ class VkontakteSource(rb.Source):
 		if entry.get_active_text():
 			entry_exists = entry.get_active_text() in self.searches
 			# sometimes links become obsolete, so, re-search enabled
-			self.searches[entry.get_active_text()] = VkontakteSearch(entry.get_active_text(), self.props.shell.props.db, self.props.entry_type,False)
+			self.searches[entry.get_active_text()] = VkontakteSearch(entry.get_active_text(), self.props.shell.props.db, self.props.entry_type,False,self.combobox.get_active())
 			# Start the search asynchronously
 			glib.idle_add(self.searches[entry.get_active_text()].start, priority=glib.PRIORITY_HIGH_IDLE)
 			# do not create new item in dropdown list if already exists
@@ -185,7 +209,12 @@ class VkontakteSource(rb.Source):
 			# Update the entry view and source so the display the query model relevant to the current search
 			self.current_search = entry.get_active_text()
 			self.props.query_model = self.searches[self.current_search].query_model
-			self.entry_view.set_model(self.props.query_model)
+			sort_type=self.combobox.get_active()
+			if sort_type==2:
+				self.entry_view.set_sorting_order("Track", gtk.SORT_ASCENDING)
+			elif sort_type==1:
+				self.entry_view.set_sorting_order("Time", gtk.SORT_DESCENDING)
+			self.entry_view.set_model(self.props.query_model)				
 
 
 	def on_pref_button_clicked(self, button, entry):
