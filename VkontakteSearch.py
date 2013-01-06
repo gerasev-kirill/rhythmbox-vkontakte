@@ -122,9 +122,6 @@ class VkontakteSearch:
 		for audio in diction:
 			self.add_entry(VkontakteResult(audio))
 		self.search_complete = True
-		f=open("/home/kirill/lol","w")
-		f.write(repr(self.entries_hashes))
-		f.close()
 
 	# Starts searching
 	def start(self):
