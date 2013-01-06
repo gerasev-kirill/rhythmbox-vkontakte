@@ -1,0 +1,37 @@
+rhythmbox-vkontakte is a rhythmbox plugin for searching and listening to vkontakte (vk.com) audio records
+
+rhythmbox-youtube (http://gitorious.org/rhythmbox-youtube/rhythmbox-youtube)
+has been used as example by developing.
+
+INSTALLATION:
+1)
+cd ~/.gnome2/rhythmbox/plugins/ (create if missing)
+git clone git://github.com/grunichev/rhythmbox-vkontakte.git vkontakte
+
+2) activate "Vkontakte-Music" plugin
+
+If you're going to download files, set directory (Plugins => Vkontakte-Music => Configure)
+By default it's:
+~/Music/%A - %T.mp3
+where %A is replaced with artist data of downloaded file and %T - with title.
+You may use these symbols many times, e.g. for per-artist folders:
+~/Music/%A/%T - %A.mp3 
+
+===========
+
+Copyright © 2010 Alexey Grunichev 
+http://github.com/grunichev/rhythmbox-vkontakte
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
