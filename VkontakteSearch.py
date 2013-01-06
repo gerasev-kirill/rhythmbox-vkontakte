@@ -7,6 +7,9 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
+#https://api.vk.com/method/audio.search?q=gaga&access_token=bbec11a1f937857295e1cbcd99ee45595fe1ed81b2d975c746bdd0e5a391627b40d99831578a23abd592f
+
+#https://oauth.vk.com/authorize?client_id=1850196&scope=audio&redirect_uri=http://oauth.vk.com/blank.html&display=page&response_type=token 
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -35,10 +38,6 @@ class VkontakteSearch:
 		self.query_model = rhythmdb.QueryModel()
 		self.search_complete = False
 		self.entries_hashes = []
-	
-	def make_sig(self, method, query):
-		str = "%sapi_id=%scount=300method=%sq=%stest_mode=1v=2.0%s" % (USER_ID, APP_ID, method, query, SECRET_KEY)
-		return hashlib.md5(str).hexdigest()
 		
 	def is_complete(self):
 		return self.search_complete
@@ -46,10 +45,9 @@ class VkontakteSearch:
 	def add_entry(self, result):
 		entry = self.db.entry_lookup_by_location(result.url)
 		# add only distinct songs (unique by title+artist+duration) to prevent duplicates
-		hash = ('%s%s%s' % (result.title, result.artist, result.duration)).lower()
-		if hash in self.entries_hashes:
+		if result.title.lower() in self.entries_hashes:
 			return
-		self.entries_hashes.append(hash)
+		self.entries_hashes.append(result.title.lower())
 		if entry is None:
 			entry = self.db.entry_new(self.entry_type, result.url)
 			if result.title:
@@ -61,20 +59,16 @@ class VkontakteSearch:
 		self.query_model.add_entry(entry, -1)
 
 	def on_search_results_recieved(self, data):
-		# vkontakte sometimes returns invalid XML with empty first line
-		data = data.lstrip()
-		# remove invalid symbol that occured in titles/artist
-		data = data.replace(u'\uffff', '')
-		xmldoc = minidom.parseString(data)
-		audios = xmldoc.getElementsByTagName("audio")
-		for audio in audios:
+		diction=eval(data)
+		diction=diction["response"]
+		diction=diction[1:]
+		for audio in diction:
 			self.add_entry(VkontakteResult(audio))
 		self.search_complete = True
 
 	# Starts searching
 	def start(self):
-		sig = self.make_sig('audio.search', self.search_term)
-		path = "http://api.vk.com/api.php?api_id=%s&count=300&v=2.0&method=audio.search&sig=%s&test_mode=1&q=%s" % (APP_ID, sig, urllib2.quote(self.search_term))
+		path="https://api.vk.com/method/audio.search?q=%s&count=300&access_token=bbec11a1f937857295e1cbcd99ee45595fe1ed81b2d975c746bdd0e5a391627b40d99831578a23abd592f" % urllib2.quote(self.search_term)
 		loader = rb.Loader()
 		loader.get_url(path, self.on_search_results_recieved)
 

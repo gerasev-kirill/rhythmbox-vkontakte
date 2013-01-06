@@ -17,11 +17,11 @@
 
 
 import rb, rhythmdb
-import gobject, gtk
+import gobject, gtk,os
 from VkontakteSource import VkontakteSource
 from VkontakteConfigDialog import VkontakteConfigDialog
 from VkontakteConfig import VkontakteConfig
-
+DATA_DIR=os.path.dirname(__file__)
 popup_ui = """
 <ui>
 	<popup name="VkontakteSourceViewPopup">
@@ -52,7 +52,7 @@ class VkontaktePlugin(rb.Plugin):
 			entry_type = shell.props.db.entry_register_type("VkontakteEntryType")
 		# Set the source's icon
 		width, height = gtk.icon_size_lookup(gtk.ICON_SIZE_LARGE_TOOLBAR)
-		icon = gtk.gdk.pixbuf_new_from_file_at_size(self.find_file("icon.ico"), width, height)
+		icon = gtk.gdk.pixbuf_new_from_file_at_size(DATA_DIR+"/icon.ico", width, height)
 		# rhythmbox api break up (0.13.2 - 0.13.3)
 		if hasattr(rb, 'rb_source_group_get_by_name'):
 			source_group = rb.rb_source_group_get_by_name("library")
@@ -77,7 +77,7 @@ class VkontaktePlugin(rb.Plugin):
 	
 	def create_configure_dialog(self, dialog=None):
 		if not dialog:
-			builder_file = self.find_file("vkontakte-prefs.ui")
+			builder_file = DATA_DIR+"/vkontakte-prefs.ui"
 			dialog = VkontakteConfigDialog (builder_file, self.config).get_dialog()
 		dialog.present()
 		return dialog
