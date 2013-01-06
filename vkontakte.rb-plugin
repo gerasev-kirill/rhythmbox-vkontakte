@@ -1,8 +1,8 @@
 [RB Plugin]
 Loader=python
-Module=__init__
+Module=vkontakte
 IAge=1
-Name=Vkontakte-Music
+Name=Vkontakte
 Description=Search, browse, and listen to vkontakte music.
 Authors=Alexey Grunichev
 Copyright=Copyright © 2010 Alexey Grunichev

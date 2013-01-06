@@ -26,13 +26,14 @@ class VkontakteAuth(gtk.Window):
 	def __init__(self, callback_function):
 		super(VkontakteAuth, self).__init__()
 		self.callback_function=callback_function
-		self.set_title("Vk Auth")
+		self.set_title("Vkontakte Rhythmbox")
 		vbox=gtk.VBox()
 		self.progressBar=gtk.ProgressBar()
 		browser=webkit.WebView()
 		scrolledWindow=gtk.ScrolledWindow()
 		scrolledWindow.add(browser)
-		label=gtk.Label("You neet to auth at vk.com!")
+		label=gtk.Label()
+		label.set_markup("<big><b>You neet to auth at vk.com!</b></big>")
 		vbox.pack_start(label,False)
 		vbox.pack_start(scrolledWindow,True)
 		vbox.pack_start(self.progressBar,False)
