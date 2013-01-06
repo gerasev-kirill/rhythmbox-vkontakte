@@ -61,7 +61,7 @@ class VkontakteAuth(gtk.Window):
 
  
 class VkontakteSearch:
-	def __init__(self, search_term, db, entry_type):
+	def __init__(self, search_term, db, entry_type,search_only_in_my_audio=False):
 		self.search_term = search_term
 		self.db = db
 		self.entry_type = entry_type
@@ -69,13 +69,24 @@ class VkontakteSearch:
 		self.search_complete = False
 		self.entries_hashes = []
 		self.preferences=VkontakteConfig()
+		self.preferences.set("search_only_in_my_audio", search_only_in_my_audio)
 		
 	def is_complete(self):
 		return self.search_complete
 	
+	def is_in_result(self,result):
+		if self.search_term in result.title.lower() :
+			return True
+		elif self.search_term in result.artist.lower() :
+			return True
+		return False
+
 	def add_entry(self, result):
 		entry = self.db.entry_lookup_by_location(result.url)
 		# add only distinct songs (unique by title+artist+duration) to prevent duplicates
+		if self.preferences.get("search_only_in_my_audio"):
+			if not self.is_in_result(result):
+				return
 		if result.title.lower() in self.entries_hashes:
 			return
 		self.entries_hashes.append(result.title.lower())
@@ -106,7 +117,56 @@ class VkontakteSearch:
 
 	# Starts searching
 	def start(self):
-		path="https://api.vk.com/method/audio.search?q=%s&count=300&access_token=%s" % (urllib2.quote(self.search_term), self.preferences.get("temporary_token") )
+		if self.preferences.get("search_only_in_my_audio"):
+			path="https://api.vk.com/method/audio.get?count=300&access_token=%s" % self.preferences.get("temporary_token")
+		else:			
+			path="https://api.vk.com/method/audio.search?q=%s&count=300&access_token=%s" % (urllib2.quote(self.search_term), self.preferences.get("temporary_token") )
+		loader = rb.Loader()
+		loader.get_url(path, self.on_search_results_recieved)
+
+
+
+class VkontakteMyLibrary:
+	def __init__(self, db, entry_type):
+		self.db = db
+		self.entry_type = entry_type
+		self.query_model = rhythmdb.QueryModel()
+		self.search_complete = False
+		self.preferences=VkontakteConfig()
+		
+	def is_complete(self):
+		return self.search_complete
+
+	def add_entry(self, result):
+		entry = self.db.entry_lookup_by_location(result.url)
+		if entry is None:
+			entry = self.db.entry_new(self.entry_type, result.url)
+			if result.title:
+				self.db.set(entry, rhythmdb.PROP_TITLE, result.title)
+			if result.duration:
+				self.db.set(entry, rhythmdb.PROP_DURATION, result.duration)
+			if result.artist:
+				self.db.set(entry, rhythmdb.PROP_ARTIST, result.artist)
+		self.query_model.add_entry(entry, -1)
+
+	def on_token_recieved(self, token):
+		self.preferences.set("temporary_token",token)
+		self.start()
+
+	def on_search_results_recieved(self, data):
+		diction=eval(data)
+		if diction.has_key("error"):
+			auth=VkontakteAuth(self.on_token_recieved)
+			return
+		diction=diction["response"]
+		diction=diction[1:]
+		for audio in diction:
+			self.add_entry(VkontakteResult(audio))
+		self.search_complete = True
+
+	# Starts searching
+	def start(self):
+		path="https://api.vk.com/method/audio.get?count=300&access_token=%s" % self.preferences.get("temporary_token")
 		loader = rb.Loader()
 		loader.get_url(path, self.on_search_results_recieved)
 

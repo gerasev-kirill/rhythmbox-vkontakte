@@ -18,10 +18,15 @@
 import rb, rhythmdb
 import gobject, gtk, glib, os
 import shutil, tempfile
-from VkontakteSearch import VkontakteSearch
+from VkontakteSearch import VkontakteSearch,VkontakteMyLibrary
 from VkontakteConfig import VkontakteConfig
+from VkontakteConfigDialog import VkontakteConfigDialog
+
 import rhythmdb
 	
+
+DATA_DIR=os.path.dirname(__file__)
+
 class VkontakteSource(rb.Source):
 	def __init__(self):
 		rb.Source.__init__(self)
@@ -51,14 +56,25 @@ class VkontakteSource(rb.Source):
 		
 		# Set up the search bar and button UI. This could probably be done in a better way.
 		search_entry = gtk.combo_box_entry_new_text()
-		self.search_button = gtk.Button("Search")
+		self.search_button = gtk.Button(stock=gtk.STOCK_FIND)
+		self.pref_button=gtk.Button(stock=gtk.STOCK_PREFERENCES)
+		self.my_audio_button = gtk.Button("Show all my audio")
+		image = gtk.Image()
+		image.set_from_stock(gtk.STOCK_CDROM,gtk.ICON_SIZE_BUTTON)
+		self.my_audio_button.set_image(image)		
+
 		alignment = gtk.Alignment()
 		alignment.add(self.search_button)
+		alignment.add(self.my_audio_button)
+		alignment.add(self.pref_button)
 		hbox = gtk.HBox()
 		hbox.pack_start(search_entry)
 		hbox.pack_start(alignment)
+		hbox.pack_start(self.my_audio_button, False)
+		hbox.pack_start(self.pref_button, False)
 		hbox.set_child_packing(search_entry, True, True, 0, gtk.PACK_START)
 		hbox.set_child_packing(alignment, True, True, 2, gtk.PACK_START)
+		#hbox.set_child_packing(self.my_audio_button, True,True,1, gtk.PACK_START)
 		vbox = gtk.VBox()
 		vbox.pack_start(hbox)
 		vbox.set_child_packing(hbox, False, False, 2, gtk.PACK_START)
@@ -67,6 +83,8 @@ class VkontakteSource(rb.Source):
 		self.show_all()
 		
 		self.search_button.connect("clicked", self.on_search_button_clicked, search_entry)
+		self.pref_button.connect("clicked", self.on_pref_button_clicked, search_entry)
+		self.my_audio_button.connect("clicked", self.on_my_audio_button_clicked, search_entry)
 		search_entry.child.set_activates_default(True)
 		search_entry.connect("changed", self.on_search_entry_changed)
 		self.search_button.set_flags(gtk.CAN_DEFAULT)
@@ -158,7 +176,7 @@ class VkontakteSource(rb.Source):
 		if entry.get_active_text():
 			entry_exists = entry.get_active_text() in self.searches
 			# sometimes links become obsolete, so, re-search enabled
-			self.searches[entry.get_active_text()] = VkontakteSearch(entry.get_active_text(), self.props.shell.props.db, self.props.entry_type)
+			self.searches[entry.get_active_text()] = VkontakteSearch(entry.get_active_text(), self.props.shell.props.db, self.props.entry_type,False)
 			# Start the search asynchronously
 			glib.idle_add(self.searches[entry.get_active_text()].start, priority=glib.PRIORITY_HIGH_IDLE)
 			# do not create new item in dropdown list if already exists
@@ -168,7 +186,28 @@ class VkontakteSource(rb.Source):
 			self.current_search = entry.get_active_text()
 			self.props.query_model = self.searches[self.current_search].query_model
 			self.entry_view.set_model(self.props.query_model)
-			
+
+
+	def on_pref_button_clicked(self, button, entry):
+		self.config = VkontakteConfig()
+		builder_file = DATA_DIR+"/vkontakte-prefs.ui"
+		dialog = VkontakteConfigDialog (builder_file, self.config).get_dialog()
+		dialog.present()
+		
+	def on_my_audio_button_clicked(self, button, entry):
+		entry_exists = "MY LIBRARY AT VK.COM" in self.searches
+		self.searches["MY LIBRARY AT VK.COM"] = VkontakteMyLibrary(self.props.shell.props.db, self.props.entry_type)
+		# Start the search asynchronously
+		glib.idle_add(self.searches["MY LIBRARY AT VK.COM"].start, priority=glib.PRIORITY_HIGH_IDLE)
+		# do not create new item in dropdown list if already exists
+		if not entry_exists:
+			entry.prepend_text("MY LIBRARY AT VK.COM")
+		# Update the entry view and source so the display the query model relevant to the current search
+		self.current_search = "MY LIBRARY AT VK.COM"
+		self.props.query_model = self.searches["MY LIBRARY AT VK.COM"].query_model
+		self.entry_view.set_model(self.props.query_model)
+	
+
 	def on_search_entry_changed(self, entry):
 		if entry.get_active_text() in self.searches:
 			self.current_search = entry.get_active_text()
