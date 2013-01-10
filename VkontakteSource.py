@@ -55,67 +55,45 @@ class VkontakteSource(rb.Source):
 		self.entry_view.set_model(query_model)
 		self.entry_view.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 		self.entry_view.set_shadow_type(gtk.SHADOW_IN)
-		
-		# Set up the search bar and button UI. This could probably be done in a better way.
-		search_entry = gtk.combo_box_entry_new_text()
-		self.search_button = gtk.Button(stock=gtk.STOCK_FIND)
-		self.pref_button=gtk.Button()
-		image = gtk.Image()
-		image.set_from_stock(gtk.STOCK_PREFERENCES,gtk.ICON_SIZE_BUTTON)
-		self.pref_button.set_image(image)
 
-		self.my_audio_button = gtk.Button("Show all my audio")
-		image2 = gtk.Image()
-		image2.set_from_stock(gtk.STOCK_CDROM,gtk.ICON_SIZE_BUTTON)
-		self.my_audio_button.set_image(image2)		
-
-
-		#combo
+		#UI
+		self.builder=gtk.Builder()
+		self.builder.add_from_file(DATA_DIR+"/main.ui")
+		#combobox with type sort
 		list_store=gtk.ListStore(str)
-		self.positions=["By duration",
-				"By popularity"]
-		for pos in self.positions:
-			list_store.append([pos])
+		list_store.append(["By duration"])
+		list_store.append(["By popularity"])
 
-		self.combobox = gtk.ComboBox(list_store)
+		self.combobox=self.builder.get_object("sort_type_combobox")
+		self.combobox.set_model(list_store)
 		renderer_text = gtk.CellRendererText()
 		self.combobox.pack_start(renderer_text, True)
 		self.combobox.add_attribute(renderer_text, "text", 0)
 		self.combobox.set_active(self.config.get("sort_type")-1)
+		#buttons,entry
+		self.search_button=self.builder.get_object("search_button")
+		pref_button=self.builder.get_object("pref_button")
+		my_audio_button=self.builder.get_object("my_audio_button")
+		search_entry = gtk.combo_box_entry_new_text()
+		search_entry.child.set_activates_default(True)
+		search_entry.connect("changed", self.on_search_entry_changed)
+		#boxes
+		search_entry_box=self.builder.get_object("search_entry_box")
+		search_entry_box.pack_start(search_entry)
+		main_box=self.builder.get_object("main_box")
 
-
-
-		alignment2 = gtk.Alignment()
-		alignment2.add(self.combobox)
-		hbox = gtk.HBox()
-		hbox2 = gtk.HBox()
-		hbox.pack_start(search_entry)
-		hbox.pack_start(alignment2)
-
-		hbox.set_child_packing(search_entry, True, True, 0, gtk.PACK_START)
-		hbox.set_child_packing(alignment2, False,True,0, gtk.PACK_START)
-		hbox.pack_start(self.search_button, False)
-		hbox2.pack_start(self.pref_button)
-		hbox2.pack_start(self.my_audio_button)
-		hbox2.set_child_packing(self.pref_button, False,False, 0,gtk.PACK_END)
-		hbox2.set_child_packing(self.my_audio_button, False, False,0,gtk.PACK_END)
-		hbox_m=gtk.HBox()
-		hbox_m.pack_start(hbox)
-		hbox_m.pack_start(hbox2)
 		vbox = gtk.VBox()
-		vbox.pack_start(hbox_m)
-		vbox.set_child_packing(hbox_m, False, False, 0, gtk.PACK_START)
+		vbox.pack_start(main_box)
+		vbox.set_child_packing(main_box, False, False, 0, gtk.PACK_START)
 		vbox.pack_start(self.entry_view)
 		self.add(vbox)
 		self.show_all()
-		
+		#connect signals
 		self.combobox.connect("changed",lambda x: self.config.set("sort_type",self.combobox.get_active()+1))
 		self.search_button.connect("clicked", self.on_search_button_clicked, search_entry)
-		self.pref_button.connect("clicked", self.on_pref_button_clicked, search_entry)
-		self.my_audio_button.connect("clicked", self.on_my_audio_button_clicked, search_entry)
-		search_entry.child.set_activates_default(True)
-		search_entry.connect("changed", self.on_search_entry_changed)
-		self.search_button.set_flags(gtk.CAN_DEFAULT)
+		pref_button.connect("clicked", self.on_pref_button_clicked, search_entry)
+		my_audio_button.connect("clicked", self.on_my_audio_button_clicked, search_entry)
+		#
 		
 		self.searches = {} # Dictionary of searches, with the search term as keys
 		self.current_search = "" # The search term of the search results currently being shown
