@@ -223,7 +223,7 @@ class VkontakteSource(rb.Source):
 
 	def on_pref_button_clicked(self, button, entry):
 		self.config = VkontakteConfig()
-		builder_file = DATA_DIR+"/new.ui"
+		builder_file = DATA_DIR+"/preferences.ui"
 		dialog = VkontakteConfigDialog (builder_file, self.config).get_dialog()
 		dialog.present()
 		

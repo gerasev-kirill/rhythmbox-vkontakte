@@ -79,7 +79,7 @@ class VkontaktePlugin(rb.Plugin):
 	
 	def create_configure_dialog(self, dialog=None):
 		if not dialog:
-			builder_file = DATA_DIR+"/vkontakte-prefs.ui"
+			builder_file = DATA_DIR+"/preferences.ui"
 			dialog = VkontakteConfigDialog (builder_file, self.config).get_dialog()
 		dialog.present()
 		return dialog
