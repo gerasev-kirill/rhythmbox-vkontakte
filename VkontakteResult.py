@@ -16,33 +16,44 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class VkontakteResult:
-	def __init__(self, entry):
+	def __init__(self, entry,config):
 		# Store the function. This will be called when we are ready to be added to the db.
 		self.title = entry['title']
-		if self.title.startswith(" "):
-			self.title=self.title[1:]
-		if self.title[-1]==" ":
-			self.title=self.title[:-1]
-		self.title=self.remove_crap(self.title)
 		self.duration = entry['duration']
 		self.artist = entry['artist']
 		self.url = entry['url'].replace("\\","")
+
+		self.title=self.remove_crap(self.title,config)
+		if config.get("use_on_artist"):
+			self.artist=self.remove_crap(self.artist,config)
+			
 	
 
-	def remove_crap(self,w):
+	def remove_crap(self,w,config):
+		if w.startswith(" "):
+			w=w[1:]
+		try:
+			if w[-1]==" ":
+				w=w[:-1]
+		except:
+			pass
+		if config.get("rm_spaces"):
+			w=w.replace("  "," ")
+		if config.get("rm_exp"):
+			try:
+				expressions="["+config.get("expressions")+"]"
+				expressions=eval(expressions)
+				for exp in expressions:
+					i=w.find(exp)
+					if i>1:
+						w=w[:i]
+			except:
+				pass
 		w=w.replace("`","'")
 		w=w.replace("' ","'")
 		w=w.replace("*","'")
 		w=w.replace("`","'")
-		w=w.replace("  "," ")
 		w=w.replace("\n"," ")
-		f=w.find("(")
-		if f>4:
-			w=w[:f]
-		for exp in ["...","?","!",". "]:
-			i=w.find(exp)
-			if i>1:
-				w=w[:i+exp.__len__()]
 		return w
 		
 		

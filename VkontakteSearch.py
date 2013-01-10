@@ -61,7 +61,7 @@ class VkontakteAuth(gtk.Window):
 
  
 class VkontakteSearch:
-	def __init__(self, search_term, db, entry_type,search_only_in_my_audio=False,sort_type=2):
+	def __init__(self, search_term, db, entry_type,config):
 		self.search_term = search_term
 		self.db = db
 		self.entry_type = entry_type
@@ -69,9 +69,7 @@ class VkontakteSearch:
 		self.search_complete = False
 		self.entries_hashes = []
 		self.track_number=0
-		self.preferences=VkontakteConfig()
-		self.preferences.set("search_only_in_my_audio", search_only_in_my_audio)
-		self.preferences.set("sort_type",sort_type)
+		self.config=config
 		
 	def is_complete(self):
 		return self.search_complete
@@ -85,8 +83,8 @@ class VkontakteSearch:
 
 	def add_entry(self, result):
 		entry = self.db.entry_lookup_by_location(result.url)
-		# add only distinct songs (unique by title+artist+duration) to prevent duplicates
-		if self.preferences.get("search_only_in_my_audio"):
+
+		if self.config.get("search_only_in_my_audio"):
 			if not self.is_in_result(result):
 				return
 		simple_title=result.title.lower().replace(" ","").replace("-","").replace(".","").replace(",","").replace("!","").replace("'","")
@@ -101,14 +99,13 @@ class VkontakteSearch:
 				self.db.set(entry, rhythmdb.PROP_DURATION, result.duration)
 			if result.artist:
 				self.db.set(entry, rhythmdb.PROP_ARTIST, result.artist)
-			if self.preferences.get("sort_type")==2:
-				self.track_number+=1
-				self.db.set(entry, rhythmdb.PROP_TRACK_NUMBER, self.track_number)
+		self.track_number+=1
+		self.db.set(entry, rhythmdb.PROP_TRACK_NUMBER, self.track_number)
 					
 		self.query_model.add_entry(entry, -1)
 
 	def on_token_recieved(self, token):
-		self.preferences.set("temporary_token",token)
+		self.config.set("temporary_token",token)
 		self.start()
 
 	def on_search_results_recieved(self, data):
@@ -120,27 +117,37 @@ class VkontakteSearch:
 		diction=diction[1:]
 		self.track_number=0
 		for audio in diction:
-			self.add_entry(VkontakteResult(audio))
+			self.add_entry(VkontakteResult(audio,self.config))
 		self.search_complete = True
 
 	# Starts searching
 	def start(self):
-		if self.preferences.get("search_only_in_my_audio"):
-			path="https://api.vk.com/method/audio.get?count=300&access_token=%s" % self.preferences.get("temporary_token")
-		else:			
-			path="https://api.vk.com/method/audio.search?q=%s&count=300&sort=%s&access_token=%s" % (urllib2.quote(self.search_term), self.preferences.get("sort_type"),self.preferences.get("temporary_token") )
+		if self.config.get("use_permanent_token"):
+			token = self.config.get("permanent_token")
+		else:
+			token = self.config.get("temporary_token")
+
+		if self.config.get("search_only_in_my_audio"):
+			path="https://api.vk.com/method/audio.get?count=400&access_token=%s" % token
+		else:
+			auto_complete=self.config.get("auto_complete")
+			if auto_complete:
+				auto_complete="&auto_complete=1"
+			else:
+				auto_complete=""
+			path="https://api.vk.com/method/audio.search?q=%s%s&count=400&sort=%s&access_token=%s" % (urllib2.quote(self.search_term), auto_complete ,self.config.get("sort_type"),token )
 		loader = rb.Loader()
 		loader.get_url(path, self.on_search_results_recieved)
 
 
 
 class VkontakteMyLibrary:
-	def __init__(self, db, entry_type):
+	def __init__(self, db, entry_type,config):
 		self.db = db
 		self.entry_type = entry_type
 		self.query_model = rhythmdb.QueryModel()
 		self.search_complete = False
-		self.preferences=VkontakteConfig()
+		self.config=config
 		
 	def is_complete(self):
 		return self.search_complete
@@ -158,7 +165,7 @@ class VkontakteMyLibrary:
 		self.query_model.add_entry(entry, -1)
 
 	def on_token_recieved(self, token):
-		self.preferences.set("temporary_token",token)
+		self.config.set("temporary_token",token)
 		self.start()
 
 	def on_search_results_recieved(self, data):
@@ -169,12 +176,17 @@ class VkontakteMyLibrary:
 		diction=diction["response"]
 		diction=diction[1:]
 		for audio in diction:
-			self.add_entry(VkontakteResult(audio))
+			self.add_entry(VkontakteResult(audio,self.config))
 		self.search_complete = True
 
 	# Starts searching
 	def start(self):
-		path="https://api.vk.com/method/audio.get?count=300&access_token=%s" % self.preferences.get("temporary_token")
+		if self.config.get("use_permanent_token"):
+			token = self.config.get("permanent_token")
+		else:
+			token = self.config.get("temporary_token")
+
+		path="https://api.vk.com/method/audio.get?count=400&access_token=%s" % token
 		loader = rb.Loader()
 		loader.get_url(path, self.on_search_results_recieved)
 

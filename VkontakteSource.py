@@ -37,12 +37,12 @@ class VkontakteSource(rb.Source):
 		self.__load_current_size = 0
 		self.__load_total_size = 0
 		self.error_msg = ''
+		self.user_download_dir=""
 	
 	def initialise(self):
 		shell = self.props.shell
 		
 		self.entry_view = rb.EntryView(shell.props.db, shell.get_player(), "", True, False)
-		
 		query_model = rhythmdb.QueryModel()
 		self.props.query_model = query_model
 		
@@ -51,6 +51,7 @@ class VkontakteSource(rb.Source):
 		self.entry_view.append_column(rb.ENTRY_VIEW_COL_ARTIST, False)
 		self.entry_view.append_column(rb.ENTRY_VIEW_COL_DURATION, False)
 		self.entry_view.set_sorting_order("Title", gtk.SORT_ASCENDING)
+		self.entry_view.set_columns_clickable(False)
 		self.entry_view.set_model(query_model)
 		self.entry_view.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 		self.entry_view.set_shadow_type(gtk.SHADOW_IN)
@@ -71,8 +72,7 @@ class VkontakteSource(rb.Source):
 
 		#combo
 		list_store=gtk.ListStore(str)
-		self.positions=["By date",
-				"By duration",
+		self.positions=["By duration",
 				"By popularity"]
 		for pos in self.positions:
 			list_store.append([pos])
@@ -81,31 +81,35 @@ class VkontakteSource(rb.Source):
 		renderer_text = gtk.CellRendererText()
 		self.combobox.pack_start(renderer_text, True)
 		self.combobox.add_attribute(renderer_text, "text", 0)
-		self.combobox.set_active(2)
+		self.combobox.set_active(self.config.get("sort_type")-1)
 
 
 
-		alignment = gtk.Alignment()
-		alignment.add(self.search_button)
 		alignment2 = gtk.Alignment()
 		alignment2.add(self.combobox)
 		hbox = gtk.HBox()
+		hbox2 = gtk.HBox()
 		hbox.pack_start(search_entry)
 		hbox.pack_start(alignment2)
-		hbox.pack_start(alignment)
 
-		hbox.pack_start(self.my_audio_button, False)
-		hbox.pack_start(self.pref_button, False)
 		hbox.set_child_packing(search_entry, True, True, 0, gtk.PACK_START)
-		hbox.set_child_packing(alignment2, False,False,2, gtk.PACK_START)
-		hbox.set_child_packing(alignment, True, True, 2, gtk.PACK_START)
+		hbox.set_child_packing(alignment2, False,True,0, gtk.PACK_START)
+		hbox.pack_start(self.search_button, False)
+		hbox2.pack_start(self.pref_button)
+		hbox2.pack_start(self.my_audio_button)
+		hbox2.set_child_packing(self.pref_button, False,False, 0,gtk.PACK_END)
+		hbox2.set_child_packing(self.my_audio_button, False, False,0,gtk.PACK_END)
+		hbox_m=gtk.HBox()
+		hbox_m.pack_start(hbox)
+		hbox_m.pack_start(hbox2)
 		vbox = gtk.VBox()
-		vbox.pack_start(hbox)
-		vbox.set_child_packing(hbox, False, False, 2, gtk.PACK_START)
+		vbox.pack_start(hbox_m)
+		vbox.set_child_packing(hbox_m, False, False, 0, gtk.PACK_START)
 		vbox.pack_start(self.entry_view)
 		self.add(vbox)
 		self.show_all()
 		
+		self.combobox.connect("changed",lambda x: self.config.set("sort_type",self.combobox.get_active()+1))
 		self.search_button.connect("clicked", self.on_search_button_clicked, search_entry)
 		self.pref_button.connect("clicked", self.on_pref_button_clicked, search_entry)
 		self.my_audio_button.connect("clicked", self.on_my_audio_button_clicked, search_entry)
@@ -200,7 +204,7 @@ class VkontakteSource(rb.Source):
 		if entry.get_active_text():
 			entry_exists = entry.get_active_text() in self.searches
 			# sometimes links become obsolete, so, re-search enabled
-			self.searches[entry.get_active_text()] = VkontakteSearch(entry.get_active_text(), self.props.shell.props.db, self.props.entry_type,False,self.combobox.get_active())
+			self.searches[entry.get_active_text()] = VkontakteSearch(entry.get_active_text(), self.props.shell.props.db, self.props.entry_type, self.config)
 			# Start the search asynchronously
 			glib.idle_add(self.searches[entry.get_active_text()].start, priority=glib.PRIORITY_HIGH_IDLE)
 			# do not create new item in dropdown list if already exists
@@ -209,12 +213,12 @@ class VkontakteSource(rb.Source):
 			# Update the entry view and source so the display the query model relevant to the current search
 			self.current_search = entry.get_active_text()
 			self.props.query_model = self.searches[self.current_search].query_model
-			sort_type=self.combobox.get_active()
-			if sort_type==2:
-				self.entry_view.set_sorting_order("Track", gtk.SORT_ASCENDING)
-			elif sort_type==1:
+			if self.config.get("sort_type")==1:
 				self.entry_view.set_sorting_order("Time", gtk.SORT_DESCENDING)
-			self.entry_view.set_model(self.props.query_model)				
+			else:
+				self.entry_view.set_sorting_order("Track", gtk.SORT_ASCENDING)
+			self.entry_view.set_model(self.props.query_model)
+				
 
 
 	def on_pref_button_clicked(self, button, entry):
@@ -225,7 +229,7 @@ class VkontakteSource(rb.Source):
 		
 	def on_my_audio_button_clicked(self, button, entry):
 		entry_exists = "MY LIBRARY AT VK.COM" in self.searches
-		self.searches["MY LIBRARY AT VK.COM"] = VkontakteMyLibrary(self.props.shell.props.db, self.props.entry_type)
+		self.searches["MY LIBRARY AT VK.COM"] = VkontakteMyLibrary(self.props.shell.props.db, self.props.entry_type,self.config)
 		# Start the search asynchronously
 		glib.idle_add(self.searches["MY LIBRARY AT VK.COM"].start, priority=glib.PRIORITY_HIGH_IDLE)
 		# do not create new item in dropdown list if already exists
@@ -267,11 +271,29 @@ class VkontakteSource(rb.Source):
 			selected_source = shell.get_property("selected-source")
 		except:
 			selected_source = shell.get_property("selected-page")
+		if self.config.get("allways_ask_path"):
+			directory=self.query_folder()
+			if directory==None:
+				return
+			self.user_download_dir=directory
+			
 		for entry in selected_source.get_entry_view().get_selected_entries():
 			self.download_queue.append(entry)
 		if not self.downloading:
 			entry = self.download_queue.pop(0)
 			self._start_download(entry)
+
+	def query_folder(self):
+ 		chooser = gtk.FileChooserDialog(title="Save to folder",action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+                                  buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK))
+		chooser.set_default_response(gtk.RESPONSE_OK)
+		chooser.set_current_folder(self.config.get("save_to_dir"))
+		response = chooser.run()
+		directory=None
+		if response == gtk.RESPONSE_OK:
+			directory=chooser.get_current_folder()
+		chooser.destroy()
+		return directory
 
 	def _start_download(self, entry):
 		shell = self.props.shell
@@ -282,7 +304,11 @@ class VkontakteSource(rb.Source):
 		title = shell.props.db.entry_get(entry, rhythmdb.PROP_TITLE)[:50].replace('/', '')
 		filemask = filemask.replace('%A', artist)
 		filemask = filemask.replace('%T', title)
+		if not self.config.get("allways_ask_path"):
+			filemask=self.config.get("save_to_dir")+"/"+filemask
+		else:
 
+			filemask=self.user_download_dir+"/"+filemask
 		self.filename = u"%s - %s" % (shell.props.db.entry_get(entry, rhythmdb.PROP_ARTIST), shell.props.db.entry_get(entry, rhythmdb.PROP_TITLE))
 		self.save_location = os.path.expanduser(filemask)
 		dir, file = os.path.split(self.save_location)
