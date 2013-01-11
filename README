@@ -5,8 +5,9 @@ has been used as example by developing.
 
 INSTALLATION:
 1)
-cd ~/.gnome2/rhythmbox/plugins/ (create if missing)
 git clone git://github.com/gerasev-kirill/rhythmbox-vkontakte.git vkontakte
+cp -R ./vkontakte/src ~/.gnome2/rhythmbox/plugins/vkontakte
+# ~/.gnome2/rhythmbox/plugins/vkontakte (create if missing)
 
 2) activate "Vkontakte" plugin
 
